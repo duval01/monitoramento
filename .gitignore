@@ -1,0 +1,21 @@
+# Credenciais - nunca subir
+*.json
+
+# Banco de dados local
+*.db
+
+# Logs
+*.csv
+
+# Planilhas Excel (dados migrados para Google Sheets)
+*.xlsx
+*.xls
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.env
+
+# Streamlit local secrets
+.streamlit/
