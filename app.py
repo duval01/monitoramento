@@ -9,15 +9,22 @@ from datetime import datetime, timedelta
 import smtplib
 from email.message import EmailMessage
 import gspread
+from google.oauth2.service_account import Credentials
 from docx import Document
 from docx.shared import Pt, RGBColor
 from groq import Groq
 
-CREDS_FILE = "theta-computing-441613-n3-21de201b64f6.json"
+_SCOPES = [
+    "https://www.googleapis.com/auth/spreadsheets",
+    "https://www.googleapis.com/auth/drive",
+]
 
 @st.cache_resource
 def get_gspread_client():
-    return gspread.service_account(filename=CREDS_FILE)
+    creds = Credentials.from_service_account_info(
+        st.secrets["gcp_service_account"], scopes=_SCOPES
+    )
+    return gspread.Client(auth=creds)
 
 # Configuração da página
 st.set_page_config(page_title="Monitoramento AEST - REURB", layout="wide")
@@ -488,8 +495,8 @@ if not hash_url:
                 hash_str = ",".join(hashes)
                 link = f"http://localhost:8501/?hash={hash_str}&template={template_ativo}"
 
-                remetente = "lfelipeduval@gmail.com"
-                senha_app = "quxn epbv qeqo powl"
+                remetente = st.secrets["gmail_remetente"]
+                senha_app = st.secrets["gmail_senha_app"]
 
                 try:
                     def normalizar_emails(campo):
@@ -615,11 +622,9 @@ if not hash_url:
             mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         )
 
-    GROQ_API_KEY = "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"
-
     def analisar_com_ia(marco, resp, texto, data):
         try:
-            client = Groq(api_key=GROQ_API_KEY)
+            client = Groq(api_key=st.secrets["groq_api_key"])
             prompt = f"""Analise esta atualização de projeto governamental:
 - Marco: {marco}
 - Responsável: {resp}
