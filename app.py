@@ -5,7 +5,7 @@ import sqlite3
 import os
 import csv
 import io
-from datetime import datetime, timedelta
+from datetime import datetime
 import smtplib
 from email.message import EmailMessage
 import gspread
@@ -39,6 +39,11 @@ USUARIOS = {
     "guilherme": "gui123",
     "thania":    "thania123",
     "ryan":      "ryan123",
+}
+
+# Usuários com e-mail corporativo (Office365) — demais usam Gmail
+EMAILS_CORPORATIVOS = {
+    "admin": "luiz.cruz@desenvolvimento.mg.gov.br",
 }
 
 def tela_login():
@@ -210,6 +215,18 @@ TEMPLATES = {
         "col_xl_marco":   12,
         "col_xl_obs":     24,
         "col_xl_data":    19,
+        "nivel_tipo":     "flat",
+    },
+    "dados_reunioes": {
+        "label":          "Reunião Gerencial",
+        "sheet_id":       "1UdP19eJ-1rNvnuDtZURBqymYLRV4CHVFcwZs_Tw34mY",
+        "aba":            "Plano de Ação 2026",
+        "skiprows":       1,
+        "colunas_pandas": [0, 2, 3, 4, 7, 9, 10, 13, 15, 16, 19, 21],
+        "col_xl_origem":  1,
+        "col_xl_marco":   8,
+        "col_xl_obs":     20,
+        "col_xl_data":    24,
         "nivel_tipo":     "flat",
     },
 }
@@ -478,71 +495,10 @@ if not hash_url:
         st.header("📧 Disparo de E-mail")
         destinatarios = st.text_input("Destinatários", placeholder="email1@ex.com, email2@ex.com")
         copias = st.text_input("Cópias", placeholder="chefe@ex.com, outro@ex.com")
-        
+
         marcos_disponiveis = df_base[df_base['a1'] == 't1']["Marcos Críticos para Realizar as Entregas"].unique()
-        
-        # Seleção Múltipla de Marcos
         marcos_para_email = st.multiselect("Escolher Marcos para atualizar:", options=marcos_disponiveis)
         anexar_docx = st.checkbox("📄 Anexar tabela completa (.docx) no e-mail")
-
-        if st.button("🚀 Enviar E-mail de Atualização", type="primary"):
-            if not destinatarios:
-                st.error("Informe pelo menos um destinatário.")
-            elif not marcos_para_email:
-                st.error("Selecione pelo menos um marco estratégico.")
-            else:
-                hashes = df_base[df_base["Marcos Críticos para Realizar as Entregas"].isin(marcos_para_email)]["HASH_ID"].tolist()
-                hash_str = ",".join(hashes)
-                link = f"http://localhost:8501/?hash={hash_str}&template={template_ativo}"
-
-                remetente = st.secrets["gmail_remetente"]
-                senha_app = st.secrets["gmail_senha_app"]
-
-                try:
-                    def normalizar_emails(campo):
-                        return [e.strip() for e in campo.replace(";", ",").split(",") if e.strip()]
-
-                    lista_dest = normalizar_emails(destinatarios)
-                    lista_cc   = normalizar_emails(copias) if copias else []
-
-                    msg = EmailMessage()
-                    msg['Subject'] = f"Monitoramento {TEMPLATES[template_ativo]['label']}: Atualização de Marcos Críticos"
-                    msg['From'] = remetente
-                    msg['To'] = ", ".join(lista_dest)
-                    if lista_cc: msg['Cc'] = ", ".join(lista_cc)
-
-                    lista_html = "".join([f"<li><b>{m}</b></li>" for m in marcos_para_email])
-                    corpo_html = f"""
-                    <html><body style="font-family: Arial, sans-serif; color: #333;">
-                        <p>Prezados, bom dia!</p>
-                        <p>Favor atualizar o status dos seguintes marcos críticos:</p>
-                        <ul style="background-color: #f5f5f5; padding: 15px; border-left: 4px solid #2a7bb5;">{lista_html}</ul>
-                        <p><a href="{link}" style="color: #2a7bb5; font-weight: bold;">[Clique aqui para acessar o formulário de atualização]</a></p>
-                    </body></html>
-                    """
-                    msg.set_content("Ative HTML para ler.")
-                    msg.add_alternative(corpo_html, subtype='html')
-
-                    if anexar_docx:
-                        label_ativo = TEMPLATES[template_ativo]["label"]
-                        nome_docx = f"Cronograma_{label_ativo}_{datetime.now().strftime('%Y%m%d')}.docx"
-                        msg.add_attachment(
-                            gerar_docx(df_base, label_ativo),
-                            maintype="application",
-                            subtype="vnd.openxmlformats-officedocument.wordprocessingml.document",
-                            filename=nome_docx,
-                        )
-
-                    with st.spinner("Conectando ao Gmail..."):
-                        server = smtplib.SMTP("smtp.gmail.com", 587)
-                        server.starttls()
-                        server.login(remetente, senha_app)
-                        server.send_message(msg)
-                        server.quit()
-                    registrar_log(st.session_state["usuario"], lista_dest, lista_cc, marcos_para_email)
-                    st.success(f"E-mail enviado para: {', '.join(lista_dest)}")
-                except Exception as e:
-                    st.error(f"Erro ao enviar e-mail: {e}")
 
         st.divider()
         st.title("Filtros de Tabela")
@@ -551,10 +507,87 @@ if not hash_url:
         f_sem_termino = st.checkbox("Apenas atividades sem término real")
         f_ponto_atencao = st.checkbox("Tem ponto de atenção?")
 
-        def limpar_lista(col): return sorted([str(x) for x in df_base[col].unique() if str(x).strip() != ""])
+        def limpar_lista(col, df=df_base):
+            return sorted([str(x) for x in df[col].unique() if str(x).strip() != ""])
+
         f_origem = st.multiselect("Origem - Plano de Ação", options=limpar_lista("Origem"))
-        f_secao = st.multiselect("Seção - Cronograma", options=limpar_lista("Seção"))
-        f_resp = st.multiselect("Responsável", options=limpar_lista("Responsável"))
+        f_secao  = st.multiselect("Seção - Cronograma",     options=limpar_lista("Seção"))
+
+        # Responsável: aplica filtros já selecionados para listar apenas nomes relevantes
+        df_para_resp = df_base.copy()
+        if f_origem: df_para_resp = df_para_resp[df_para_resp["Origem"].isin(f_origem)]
+        if f_secao:  df_para_resp = df_para_resp[df_para_resp["Seção"].isin(f_secao)]
+        f_resp = st.multiselect("Responsável", options=limpar_lista("Responsável", df_para_resp))
+
+        st.divider()
+        if st.button("🚀 Enviar E-mail de Atualização", type="primary", use_container_width=True):
+            if not destinatarios:
+                st.error("Informe pelo menos um destinatário.")
+            else:
+                def normalizar_emails(campo):
+                    return [e.strip() for e in campo.replace(";", ",").split(",") if e.strip()]
+
+                lista_dest   = normalizar_emails(destinatarios)
+                lista_cc     = normalizar_emails(copias) if copias else []
+                usuario_atual = st.session_state.get("usuario", "")
+                if usuario_atual in EMAILS_CORPORATIVOS:
+                    remetente    = EMAILS_CORPORATIVOS[usuario_atual]
+                    senha_app    = st.secrets["senha_corp_admin"]
+                    smtp_host    = st.secrets.get("smtp_corp_host", "smtp.office365.com")
+                    smtp_porta   = int(st.secrets.get("smtp_corp_porta", 587))
+                    smtp_usuario = st.secrets.get("smtp_corp_usuario", remetente)
+                else:
+                    remetente    = st.secrets["gmail_remetente"]
+                    senha_app    = st.secrets["gmail_senha_app"]
+                    smtp_host    = "smtp.gmail.com"
+                    smtp_porta   = 587
+                    smtp_usuario = remetente
+
+                if marcos_para_email:
+                    hashes     = df_base[df_base["Marcos Críticos para Realizar as Entregas"].isin(marcos_para_email)]["HASH_ID"].tolist()
+                    hash_str   = ",".join(hashes)
+                    link       = f"https://monitoramento-aest.streamlit.app/?hash={hash_str}&template={template_ativo}"
+                    lista_html = "".join([f"<li><b>{m}</b></li>" for m in marcos_para_email])
+                    bloco_marcos = f"""
+                        <p>Favor atualizar o status dos seguintes marcos críticos:</p>
+                        <ul style="background-color:#f5f5f5;padding:15px;border-left:4px solid #2a7bb5;">{lista_html}</ul>
+                        <p><a href="{link}" style="color:#2a7bb5;font-weight:bold;">[Clique aqui para acessar o formulário de atualização]</a></p>"""
+                else:
+                    bloco_marcos = ""
+
+                corpo_html = f"""
+                <html><body style="font-family:Arial,sans-serif;color:#333;">
+                    <p>Prezados, bom dia!</p>
+                    {bloco_marcos}
+                </body></html>"""
+
+                try:
+                    with st.spinner("Conectando ao servidor de e-mail..."):
+                        msg = EmailMessage()
+                        msg['Subject'] = f"Monitoramento {TEMPLATES[template_ativo]['label']}: Atualização de Marcos Críticos"
+                        msg['From']    = remetente
+                        msg['To']      = ", ".join(lista_dest)
+                        if lista_cc: msg['Cc'] = ", ".join(lista_cc)
+                        msg.set_content("Ative HTML para ler.")
+                        msg.add_alternative(corpo_html, subtype='html')
+                        if anexar_docx:
+                            label_ativo = TEMPLATES[template_ativo]["label"]
+                            nome_docx   = f"Cronograma_{label_ativo}_{datetime.now().strftime('%Y%m%d')}.docx"
+                            msg.add_attachment(
+                                gerar_docx(df_base, label_ativo),
+                                maintype="application",
+                                subtype="vnd.openxmlformats-officedocument.wordprocessingml.document",
+                                filename=nome_docx,
+                            )
+                        server = smtplib.SMTP(smtp_host, smtp_porta)
+                        server.starttls()
+                        server.login(smtp_usuario, senha_app)
+                        server.send_message(msg)
+                        server.quit()
+                    registrar_log(st.session_state["usuario"], lista_dest, lista_cc, marcos_para_email)
+                    st.success(f"E-mail enviado para: {', '.join(lista_dest)}")
+                except Exception as e:
+                    st.error(f"Erro ao enviar e-mail: {e}")
 
     # Lógica de Filtragem
     df_f = df_base.copy()
