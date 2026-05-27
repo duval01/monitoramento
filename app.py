@@ -29,6 +29,21 @@ def get_gspread_client():
 # Configuração da página
 st.set_page_config(page_title="Monitoramento AEST - REURB", layout="wide")
 
+st.markdown("""
+<style>
+.block-container { padding-top: 1.2rem !important; padding-bottom: 1rem !important; }
+section[data-testid="stSidebar"] > div:first-child { padding-top: 0 !important; }
+section[data-testid="stSidebar"] [data-testid="stSidebarHeader"] { padding-top: 0 !important; padding-bottom: 0 !important; min-height: 0 !important; }
+section[data-testid="stSidebar"] .stImage { margin-top: -2.5rem; margin-bottom: 0.2rem; }
+section[data-testid="stSidebar"] [data-testid="stVerticalBlock"]:first-of-type { padding-top: 0 !important; }
+section[data-testid="stSidebar"] h1,
+section[data-testid="stSidebar"] h2,
+section[data-testid="stSidebar"] h3 { margin-top: 0.3rem; margin-bottom: 0.3rem; }
+section[data-testid="stSidebar"] hr { margin-top: 0.6rem; margin-bottom: 0.6rem; }
+section[data-testid="stSidebar"] [data-testid="stVerticalBlock"] { gap: 0.35rem; }
+</style>
+""", unsafe_allow_html=True)
+
 # --- 0. AUTENTICAÇÃO ---
 USUARIOS = {
     "admin":     "admin",
@@ -42,9 +57,7 @@ USUARIOS = {
 }
 
 # Usuários com e-mail corporativo (Office365) — demais usam Gmail
-EMAILS_CORPORATIVOS = {
-    "admin": "luiz.cruz@desenvolvimento.mg.gov.br",
-}
+EMAILS_CORPORATIVOS = {}
 
 def tela_login():
     _, col_centro, _ = st.columns([1, 1, 1])
@@ -287,6 +300,37 @@ def verificar_formulario_respondido(lista_hashes):
         return True, row[0], row[1]
     return False, None, None
 
+def buscar_respostas_por_hashes(lista_hashes):
+    conn = sqlite3.connect('monitoramento_reurb.db')
+    placeholders = ",".join(["?"] * len(lista_hashes))
+    df = pd.read_sql_query(
+        f"SELECT id, hash_id, data_envio, responsavel, marco, atualizacao, nova_data, concluido, template FROM respostas WHERE hash_id IN ({placeholders}) ORDER BY id DESC",
+        conn, params=lista_hashes
+    )
+    conn.close()
+    return df
+
+def deletar_respostas_por_hashes(lista_hashes):
+    conn = sqlite3.connect('monitoramento_reurb.db')
+    c = conn.cursor()
+    placeholders = ",".join(["?"] * len(lista_hashes))
+    c.execute(f"DELETE FROM respostas WHERE hash_id IN ({placeholders})", lista_hashes)
+    conn.commit()
+    conn.close()
+
+def atualizar_respondedor_formulario(lista_hashes, respondido_por):
+    conn = sqlite3.connect('monitoramento_reurb.db')
+    c = conn.cursor()
+    data_envio = datetime.now().strftime("%d/%m/%Y %H:%M")
+    for h in lista_hashes:
+        c.execute(
+            "INSERT INTO formularios_respondidos (hash_id, respondido_por, data_envio) VALUES (?,?,?) "
+            "ON CONFLICT(hash_id) DO UPDATE SET respondido_por=excluded.respondido_por, data_envio=excluded.data_envio",
+            (h, respondido_por, data_envio)
+        )
+    conn.commit()
+    conn.close()
+
 def deletar_resposta(id_resp):
     conn = sqlite3.connect('monitoramento_reurb.db')
     c = conn.cursor()
@@ -465,45 +509,51 @@ hash_url     = query_params.get("hash")
 
 # Detecta template: URL tem prioridade (formulário externo), senão usa sessão
 if hash_url:
-    template_ativo = query_params.get("template", "reurb")
+    template_ativo  = query_params.get("template", "reurb")
+    templates_ativos = [template_ativo]
+    df_base = carregar_e_limpar_dados(template_ativo)
 else:
-    if "template_ativo" not in st.session_state:
-        st.session_state["template_ativo"] = "reurb"
-    template_ativo = st.session_state["template_ativo"]
-
-df_base = carregar_e_limpar_dados(template_ativo)
+    if "templates_ativos" not in st.session_state:
+        st.session_state["templates_ativos"] = ["reurb"]
+    templates_ativos = st.session_state["templates_ativos"] or ["reurb"]
+    _dfs = []
+    for _t in templates_ativos:
+        _df_t = carregar_e_limpar_dados(_t)
+        if not _df_t.empty:
+            _df_t = _df_t.copy()
+            _df_t["_template"] = _t
+            _dfs.append(_df_t)
+    df_base = pd.concat(_dfs, ignore_index=True) if _dfs else pd.DataFrame()
+    template_ativo = templates_ativos[0]
 
 if not hash_url:
     # ---------------------------------------------------------
     # TELA DO TÉCNICO (ADMIN)
     # ---------------------------------------------------------
     with st.sidebar:
-        st.image("AEST Sede (1).png", width=180)
-        st.markdown(f"**Bem vindo(a), {st.session_state.get('usuario', '')}**")
+        col_logo, col_msg = st.columns([1, 2], vertical_alignment="center")
+        with col_logo:
+            st.image("AEST Sede (1).png", use_container_width=True)
+        with col_msg:
+            st.markdown(f"**Bem vindo(a),<br>{st.session_state.get('usuario', '')}**", unsafe_allow_html=True)
 
         template_opcoes = list(TEMPLATES.keys())
-        template_sel = st.selectbox(
-            "📂 Template",
+        template_sel = st.multiselect(
+            "📂 Templates",
             options=template_opcoes,
+            default=templates_ativos,
             format_func=lambda k: TEMPLATES[k]["label"],
-            index=template_opcoes.index(template_ativo),
         )
-        if template_sel != template_ativo:
-            st.session_state["template_ativo"] = template_sel
+        if not template_sel:
+            template_sel = templates_ativos
+        if template_sel != templates_ativos:
+            st.session_state["templates_ativos"] = template_sel
             st.rerun()
 
-        st.header("📧 Disparo de E-mail")
-        destinatarios = st.text_input("Destinatários", placeholder="email1@ex.com, email2@ex.com")
-        copias = st.text_input("Cópias", placeholder="chefe@ex.com, outro@ex.com")
-
-        marcos_disponiveis = df_base[df_base['a1'] == 't1']["Marcos Críticos para Realizar as Entregas"].unique()
-        marcos_para_email = st.multiselect("Escolher Marcos para atualizar:", options=marcos_disponiveis)
-        anexar_docx = st.checkbox("📄 Anexar tabela completa (.docx) no e-mail")
-
         st.divider()
-        st.title("Filtros de Tabela")
+        st.subheader("Filtros de Tabela")
         opcoes_tempo = ["Sem filtro", "15 dias", "30 dias", "45 dias", "60 dias", "90 dias", "120 dias", "Neste mês"]
-        dias_filtro = st.radio("Previsão de Término:", options=opcoes_tempo, index=0)
+        dias_filtro = st.selectbox("Previsão de Término:", options=opcoes_tempo, index=0)
         f_sem_termino = st.checkbox("Apenas atividades sem término real")
         f_ponto_atencao = st.checkbox("Tem ponto de atenção?")
 
@@ -518,6 +568,15 @@ if not hash_url:
         if f_origem: df_para_resp = df_para_resp[df_para_resp["Origem"].isin(f_origem)]
         if f_secao:  df_para_resp = df_para_resp[df_para_resp["Seção"].isin(f_secao)]
         f_resp = st.multiselect("Responsável", options=limpar_lista("Responsável", df_para_resp))
+
+        st.divider()
+        st.subheader("📧 Disparo de E-mail")
+        destinatarios = st.text_input("Destinatários", placeholder="email1@ex.com, email2@ex.com")
+        copias        = st.text_input("Cópias",       placeholder="chefe@ex.com, outro@ex.com")
+        anexar_docx   = st.checkbox("📄 Anexar tabela completa (.docx) no e-mail")
+
+        marcos_disponiveis = df_base[df_base['a1'] == 't1']["Marcos Críticos para Realizar as Entregas"].unique()
+        marcos_para_email  = st.multiselect("Marcos para atualização:", options=marcos_disponiveis)
 
         st.divider()
         if st.button("🚀 Enviar E-mail de Atualização", type="primary", use_container_width=True):
@@ -544,14 +603,19 @@ if not hash_url:
                     smtp_usuario = remetente
 
                 if marcos_para_email:
-                    hashes     = df_base[df_base["Marcos Críticos para Realizar as Entregas"].isin(marcos_para_email)]["HASH_ID"].tolist()
-                    hash_str   = ",".join(hashes)
-                    link       = f"https://monitoramento-aest.streamlit.app/?hash={hash_str}&template={template_ativo}"
-                    lista_html = "".join([f"<li><b>{m}</b></li>" for m in marcos_para_email])
-                    bloco_marcos = f"""
-                        <p>Favor atualizar o status dos seguintes marcos críticos:</p>
-                        <ul style="background-color:#f5f5f5;padding:15px;border-left:4px solid #2a7bb5;">{lista_html}</ul>
-                        <p><a href="{link}" style="color:#2a7bb5;font-weight:bold;">[Clique aqui para acessar o formulário de atualização]</a></p>"""
+                    bloco_marcos = "<p>Favor atualizar o status dos seguintes marcos críticos:</p>"
+                    for _t in templates_ativos:
+                        _df_t     = df_base[df_base["_template"] == _t] if "_template" in df_base.columns else df_base
+                        _marcos_t = [m for m in marcos_para_email if m in _df_t["Marcos Críticos para Realizar as Entregas"].values]
+                        if not _marcos_t:
+                            continue
+                        _hashes    = _df_t[_df_t["Marcos Críticos para Realizar as Entregas"].isin(_marcos_t)]["HASH_ID"].tolist()
+                        _link      = f"https://monitoramento-aest.streamlit.app/?hash={','.join(_hashes)}&template={_t}"
+                        _lista_html = "".join([f"<li><b>{m}</b></li>" for m in _marcos_t])
+                        bloco_marcos += f"""
+                            <p><b>{TEMPLATES[_t]['label']}</b></p>
+                            <ul style="background-color:#f5f5f5;padding:15px;border-left:4px solid #2a7bb5;">{_lista_html}</ul>
+                            <p><a href="{_link}" style="color:#2a7bb5;font-weight:bold;">[Formulário de atualização — {TEMPLATES[_t]['label']}]</a></p>"""
                 else:
                     bloco_marcos = ""
 
@@ -564,14 +628,15 @@ if not hash_url:
                 try:
                     with st.spinner("Conectando ao servidor de e-mail..."):
                         msg = EmailMessage()
-                        msg['Subject'] = f"Monitoramento {TEMPLATES[template_ativo]['label']}: Atualização de Marcos Críticos"
+                        _label_email = TEMPLATES[template_ativo]["label"] if len(templates_ativos) == 1 else "Múltiplos Templates"
+                        msg['Subject'] = f"Monitoramento {_label_email}: Atualização de Marcos Críticos"
                         msg['From']    = remetente
                         msg['To']      = ", ".join(lista_dest)
                         if lista_cc: msg['Cc'] = ", ".join(lista_cc)
                         msg.set_content("Ative HTML para ler.")
                         msg.add_alternative(corpo_html, subtype='html')
                         if anexar_docx:
-                            label_ativo = TEMPLATES[template_ativo]["label"]
+                            label_ativo = _label_email
                             nome_docx   = f"Cronograma_{label_ativo}_{datetime.now().strftime('%Y%m%d')}.docx"
                             msg.add_attachment(
                                 gerar_docx(df_base, label_ativo),
@@ -597,7 +662,10 @@ if not hash_url:
     if f_sem_termino: df_f = df_f[(df_f["Término Real"] == "") | (df_f["a1"] != "t1")]
     if f_ponto_atencao: df_f = df_f[(df_f["Pontos_Atencao"] != "") | (df_f["a1"] != "t1")]
 
-    st.title("📑 Painel de Monitoramento AEST")
+    st.markdown(
+        "<h2 style='margin-top:0;margin-bottom:0.4rem;'>📑 Painel de Monitoramento AEST</h2>",
+        unsafe_allow_html=True
+    )
 
     st.markdown("""
     <style>
@@ -644,16 +712,37 @@ if not hash_url:
         for c in ["Tendência de Término", "Término Planejado (Linha de Base)", "Término Real"]:
             df_view[c] = pd.to_datetime(df_view[c], errors='coerce').dt.strftime('%d/%m/%Y').fillna("")
 
-        st.dataframe(df_view[colunas_vistas + ['a1']].style.apply(style_rows, axis=1),
-                     use_container_width=True, hide_index=True, column_order=colunas_vistas)
-
-        nome_arquivo = f"Cronograma_{TEMPLATES[template_ativo]['label']}_{datetime.now().strftime('%Y%m%d')}.docx"
-        st.download_button(
-            label="📄 Exportar tabela como .docx",
-            data=gerar_docx(df_f, TEMPLATES[template_ativo]["label"]),
-            file_name=nome_arquivo,
-            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        )
+        if len(templates_ativos) > 1 and "_template" in df_view.columns:
+            for _t in templates_ativos:
+                _df_t = df_view[df_view["_template"] == _t]
+                if _df_t.empty:
+                    continue
+                st.markdown(f"#### 📂 {TEMPLATES[_t]['label']}")
+                st.dataframe(
+                    _df_t[colunas_vistas + ['a1']].style.apply(style_rows, axis=1),
+                    use_container_width=True, hide_index=True, column_order=colunas_vistas
+                )
+                _nome_dl = f"Cronograma_{TEMPLATES[_t]['label']}_{datetime.now().strftime('%Y%m%d')}.docx"
+                st.download_button(
+                    label=f"📄 Exportar {TEMPLATES[_t]['label']} (.docx)",
+                    data=gerar_docx(df_f[df_f["_template"] == _t], TEMPLATES[_t]["label"]),
+                    file_name=_nome_dl,
+                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    key=f"dl_{_t}",
+                )
+        else:
+            st.dataframe(
+                df_view[colunas_vistas + ['a1']].style.apply(style_rows, axis=1),
+                use_container_width=True, hide_index=True, column_order=colunas_vistas
+            )
+            _label_dl    = TEMPLATES[template_ativo]["label"]
+            nome_arquivo = f"Cronograma_{_label_dl}_{datetime.now().strftime('%Y%m%d')}.docx"
+            st.download_button(
+                label="📄 Exportar tabela como .docx",
+                data=gerar_docx(df_f, _label_dl),
+                file_name=nome_arquivo,
+                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            )
 
     def analisar_com_ia(marco, resp, texto, data):
         try:
@@ -758,48 +847,94 @@ else:
 
     if not res.empty:
         ja_respondido, quem_respondeu, data_resp = verificar_formulario_respondido(lista_hashes)
-        if ja_respondido:
-            st.warning(f"⚠️ Atualizações já enviadas por **{quem_respondeu}** em {data_resp}.")
+        df_respostas_existentes = buscar_respostas_por_hashes(lista_hashes)
+
+        if ja_respondido and df_respostas_existentes.empty:
+            st.warning(f"⚠️ Atualizações já enviadas por **{quem_respondeu}** em {data_resp} e já confirmadas na planilha. Não é mais possível alterar por aqui — entre em contato com a equipe de monitoramento se precisar de uma correção.")
             st.stop()
+
+        if ja_respondido:
+            st.info(f"ℹ️ Este formulário já foi respondido por **{quem_respondeu}** em {data_resp}. Você pode revisar e alterar as informações abaixo se necessário.")
+
+        respostas_por_hash = {r['hash_id']: r for _, r in df_respostas_existentes.iterrows()}
+
+        st.markdown(f"#### 📂 Contexto: {TEMPLATES[template_ativo]['label']}")
+        st.caption("Linhas destacadas em amarelo são as que serão atualizadas neste formulário.")
+
+        def _style_form_rows(row):
+            if row['HASH_ID'] in lista_hashes:
+                return ['background-color: #fff3b0; font-weight: bold'] * len(row)
+            if row['a1'] == 'p1': return ['background-color: #2a7bb5; color: white; font-weight: bold'] * len(row)
+            if row['a1'] == 'c1': return ['background-color: #7d7d7d; color: white; font-weight: bold'] * len(row)
+            if row['a1'] == 'c2': return ['background-color: #d9d9d9; font-weight: bold'] * len(row)
+            return [''] * len(row)
+
+        _colunas_ctx = ["Marcos Críticos para Realizar as Entregas", "Responsável", "Término Planejado (Linha de Base)", "Tendência de Término", "Término Real", "Observações"]
+        _df_ctx = df_base.copy()
+        for c in ["Tendência de Término", "Término Planejado (Linha de Base)", "Término Real"]:
+            _df_ctx[c] = pd.to_datetime(_df_ctx[c], errors='coerce').dt.strftime('%d/%m/%Y').fillna("")
+        st.dataframe(
+            _df_ctx[_colunas_ctx + ['a1', 'HASH_ID']].style.apply(_style_form_rows, axis=1),
+            use_container_width=True, hide_index=True, column_order=_colunas_ctx, height=350,
+        )
 
         st.info("Por favor, preencha as atualizações para os marcos abaixo:")
 
-        with st.form("f_multi"):
-            respondido_por = st.text_input("Respondido por:", placeholder="Seu nome completo", key="respondido_por")
+        nome_pre = quem_respondeu if ja_respondido else ""
+        respondido_por = st.text_input("Respondido por:", value=nome_pre, placeholder="Seu nome completo", key="respondido_por")
+        st.divider()
+
+        # O 'idx' representa o número real da linha do dataframe (sempre único)
+        for idx, r in res.iterrows():
+            data_formatada = pd.to_datetime(r['Tendência de Término']).strftime('%d/%m/%Y') if r['Tendência de Término'] else 'Não definido'
+
+            st.markdown(f"### 📌 {r['Marcos Críticos para Realizar as Entregas']}")
+            st.write(f"**Responsável:** {r['Responsável']} | **Prazo Atual:** {data_formatada}")
+
+            _resp_anterior = respostas_por_hash.get(r['HASH_ID'])
+            _txt_pre  = _resp_anterior['atualizacao'] if _resp_anterior is not None else ""
+            _dt_pre   = None
+            if _resp_anterior is not None and _resp_anterior['nova_data'] and _resp_anterior['nova_data'] not in ["None", ""]:
+                try:
+                    _dt_pre = datetime.strptime(_resp_anterior['nova_data'], "%Y-%m-%d").date()
+                except Exception:
+                    _dt_pre = None
+            _conc_pre = _resp_anterior['concluido'] if (_resp_anterior is not None and _resp_anterior['concluido'] in ["Sim", "Não"]) else "Não"
+
+            _key_conc = f"conc_{r['HASH_ID']}_{idx}"
+            _key_txt  = f"txt_{r['HASH_ID']}_{idx}"
+            _key_dt   = f"dt_{r['HASH_ID']}_{idx}"
+
+            st.text_area("Atualização da equipe:", value=_txt_pre, key=_key_txt)
+            st.radio("Atividade concluída?", options=["Não", "Sim"], horizontal=True,
+                     index=["Não", "Sim"].index(_conc_pre), key=_key_conc)
+            _label_data = "Data de conclusão:" if st.session_state.get(_key_conc, _conc_pre) == "Sim" else "Nova tendência de término:"
+            st.date_input(_label_data, value=_dt_pre, key=_key_dt)
             st.divider()
 
-            # O 'idx' representa o número real da linha do dataframe (sempre único)
-            for idx, r in res.iterrows():
-                data_formatada = pd.to_datetime(r['Tendência de Término']).strftime('%d/%m/%Y') if r['Tendência de Término'] else 'Não definido'
+        _label_btn = "Salvar alterações" if ja_respondido else "Enviar todas as atualizações"
+        if st.button(_label_btn, type="primary", key="btn_enviar_form"):
+            nome = st.session_state["respondido_por"].strip()
+            if not nome:
+                st.error("⚠️ Informe seu nome no campo 'Respondido por' antes de enviar.")
+            else:
+                enviou_algum = False
+                if ja_respondido:
+                    deletar_respostas_por_hashes(lista_hashes)
+                for idx, r in res.iterrows():
+                    status    = st.session_state[f"txt_{r['HASH_ID']}_{idx}"]
+                    nova_tend = st.session_state[f"dt_{r['HASH_ID']}_{idx}"]
+                    concluido = st.session_state[f"conc_{r['HASH_ID']}_{idx}"]
 
-                st.markdown(f"### 📌 {r['Marcos Críticos para Realizar as Entregas']}")
-                st.write(f"**Responsável:** {r['Responsável']} | **Prazo Atual:** {data_formatada}")
+                    if status:
+                        salvar_resposta(r['HASH_ID'], r['Marcos Críticos para Realizar as Entregas'], r['Responsável'], status, nova_tend, concluido, template_ativo)
+                        enviou_algum = True
 
-                st.text_area("Atualização da equipe:", key=f"txt_{r['HASH_ID']}_{idx}")
-                st.date_input("Nova tendência de término:", value=None, key=f"dt_{r['HASH_ID']}_{idx}")
-                st.radio("Atividade concluída?", options=["Não", "Sim"], horizontal=True, key=f"conc_{r['HASH_ID']}_{idx}")
-                st.divider()
-
-            if st.form_submit_button("Enviar todas as atualizações", type="primary"):
-                nome = st.session_state["respondido_por"].strip()
-                if not nome:
-                    st.error("⚠️ Informe seu nome no campo 'Respondido por' antes de enviar.")
+                if enviou_algum:
+                    atualizar_respondedor_formulario(lista_hashes, nome)
+                    st.session_state["formulario_enviado"] = True
+                    st.rerun()
                 else:
-                    enviou_algum = False
-                    for idx, r in res.iterrows():
-                        status    = st.session_state[f"txt_{r['HASH_ID']}_{idx}"]
-                        nova_tend = st.session_state[f"dt_{r['HASH_ID']}_{idx}"]
-                        concluido = st.session_state[f"conc_{r['HASH_ID']}_{idx}"]
-
-                        if status:
-                            salvar_resposta(r['HASH_ID'], r['Marcos Críticos para Realizar as Entregas'], r['Responsável'], status, nova_tend, concluido, template_ativo)
-                            enviou_algum = True
-
-                    if enviou_algum:
-                        marcar_formulario_respondido(lista_hashes, nome)
-                        st.session_state["formulario_enviado"] = True
-                        st.rerun()
-                    else:
-                        st.warning("⚠️ Nenhuma atualização preenchida. Escreva em pelo menos um marco.")
+                    st.warning("⚠️ Nenhuma atualização preenchida. Escreva em pelo menos um marco.")
     else:
         st.error("Link de atualização inválido ou atividades não encontradas.")
