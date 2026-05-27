@@ -358,6 +358,25 @@ def registrar_log(usuario, destinatarios, copias, marcos):
             "marcos":       "; ".join(marcos),
         })
 
+@st.cache_data(ttl=30)
+def carregar_emails_conhecidos():
+    if not os.path.exists(LOG_PATH):
+        return []
+    emails = set()
+    try:
+        with open(LOG_PATH, "r", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                for campo in ("destinatarios", "copias"):
+                    raw = (row.get(campo) or "").replace(",", ";")
+                    for e in raw.split(";"):
+                        e = e.strip().lower()
+                        if e and "@" in e and "." in e.split("@")[-1]:
+                            emails.add(e)
+    except Exception:
+        pass
+    return sorted(emails)
+
 # --- FUNÇÃO: INJETAR DADOS NO GOOGLE SHEETS ---
 def confirmar_na_planilha(hash_id, texto_novo, nova_data_str, template_nome="reurb"):
     cfg = TEMPLATES[template_nome]
@@ -405,7 +424,18 @@ def gerar_docx(df, template_label):
     for c in ["Tendência de Término", "Término Planejado (Linha de Base)", "Término Real"]:
         df_exp[c] = pd.to_datetime(df_exp[c], errors='coerce').dt.strftime('%d/%m/%Y').fillna("")
 
+    df_exp["Observações"] = df_exp["Observações"].astype(str).map(lambda s: s.split("|", 1)[0].strip())
+
     doc = Document()
+    secao = doc.sections[0]
+    from docx.shared import Cm
+    from docx.enum.section import WD_ORIENT
+    secao.orientation = WD_ORIENT.PORTRAIT
+    secao.page_width  = Cm(21.0)
+    secao.page_height = Cm(29.7)
+    for m in ("top_margin", "bottom_margin", "left_margin", "right_margin"):
+        setattr(secao, m, Cm(1.2))
+
     doc.add_heading(f"Cronograma — {template_label}", level=1)
     doc.add_paragraph(f"Gerado em {datetime.now().strftime('%d/%m/%Y %H:%M')}")
 
@@ -571,23 +601,33 @@ if not hash_url:
 
         st.divider()
         st.subheader("📧 Disparo de E-mail")
-        destinatarios = st.text_input("Destinatários", placeholder="email1@ex.com, email2@ex.com")
-        copias        = st.text_input("Cópias",       placeholder="chefe@ex.com, outro@ex.com")
-        anexar_docx   = st.checkbox("📄 Anexar tabela completa (.docx) no e-mail")
+        _emails_conhecidos = carregar_emails_conhecidos()
+        lista_dest = st.multiselect(
+            "Destinatários",
+            options=_emails_conhecidos,
+            accept_new_options=True,
+            placeholder="Selecione ou digite um e-mail",
+            key="dest_multi",
+        )
+        lista_cc = st.multiselect(
+            "Cópias",
+            options=_emails_conhecidos,
+            accept_new_options=True,
+            placeholder="Selecione ou digite um e-mail",
+            key="cc_multi",
+        )
+        anexar_docx = st.checkbox("📄 Anexar tabela completa (.docx) no e-mail")
 
         marcos_disponiveis = df_base[df_base['a1'] == 't1']["Marcos Críticos para Realizar as Entregas"].unique()
         marcos_para_email  = st.multiselect("Marcos para atualização:", options=marcos_disponiveis)
 
         st.divider()
         if st.button("🚀 Enviar E-mail de Atualização", type="primary", use_container_width=True):
-            if not destinatarios:
+            if not lista_dest:
                 st.error("Informe pelo menos um destinatário.")
             else:
-                def normalizar_emails(campo):
-                    return [e.strip() for e in campo.replace(";", ",").split(",") if e.strip()]
-
-                lista_dest   = normalizar_emails(destinatarios)
-                lista_cc     = normalizar_emails(copias) if copias else []
+                lista_dest    = [e.strip().lower() for e in lista_dest if e and e.strip()]
+                lista_cc      = [e.strip().lower() for e in (lista_cc or []) if e and e.strip()]
                 usuario_atual = st.session_state.get("usuario", "")
                 if usuario_atual in EMAILS_CORPORATIVOS:
                     remetente    = EMAILS_CORPORATIVOS[usuario_atual]
@@ -636,10 +676,17 @@ if not hash_url:
                         msg.set_content("Ative HTML para ler.")
                         msg.add_alternative(corpo_html, subtype='html')
                         if anexar_docx:
+                            df_docx = df_base.copy()
+                            if f_origem:        df_docx = df_docx[df_docx["Origem"].isin(f_origem)]
+                            if f_secao:         df_docx = df_docx[df_docx["Seção"].isin(f_secao)]
+                            if f_resp:          df_docx = df_docx[df_docx["Responsável"].isin(f_resp)]
+                            if f_sem_termino:   df_docx = df_docx[(df_docx["Término Real"] == "") | (df_docx["a1"] != "t1")]
+                            if f_ponto_atencao: df_docx = df_docx[(df_docx["Pontos_Atencao"] != "") | (df_docx["a1"] != "t1")]
+
                             label_ativo = _label_email
                             nome_docx   = f"Cronograma_{label_ativo}_{datetime.now().strftime('%Y%m%d')}.docx"
                             msg.add_attachment(
-                                gerar_docx(df_base, label_ativo),
+                                gerar_docx(df_docx, label_ativo),
                                 maintype="application",
                                 subtype="vnd.openxmlformats-officedocument.wordprocessingml.document",
                                 filename=nome_docx,
@@ -650,6 +697,7 @@ if not hash_url:
                         server.send_message(msg)
                         server.quit()
                     registrar_log(st.session_state["usuario"], lista_dest, lista_cc, marcos_para_email)
+                    carregar_emails_conhecidos.clear()
                     st.success(f"E-mail enviado para: {', '.join(lista_dest)}")
                 except Exception as e:
                     st.error(f"Erro ao enviar e-mail: {e}")
