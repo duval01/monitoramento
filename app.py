@@ -88,10 +88,12 @@ TEMPLATES = {
         "aba":            "Capa",
         "skiprows":       33,
         "colunas_pandas": [0, 1, 2, 3, 7, 10, 11, 14, 16, 17, 19, 20],
-        "col_xl_origem":  1,
-        "col_xl_marco":   8,
-        "col_xl_obs":     20,
-        "col_xl_data":    17,
+        "col_xl_origem":       1,
+        "col_xl_marco":        8,
+        "col_xl_obs":         20,
+        "col_xl_data":        17,
+        "col_xl_duracao":     13,
+        "col_xl_tend_inicio": 16,
     },
     "mlpc": {
         "label":          "Minas Livre para Crescer",
@@ -99,10 +101,12 @@ TEMPLATES = {
         "aba":            "Capa",
         "skiprows":       32,
         "colunas_pandas": [0, 1, 2, 3, 7, 10, 11, 14, 16, 17, 19, 20],
-        "col_xl_origem":  1,
-        "col_xl_marco":   8,
-        "col_xl_obs":     20,
-        "col_xl_data":    17,
+        "col_xl_origem":       1,
+        "col_xl_marco":        8,
+        "col_xl_obs":         20,
+        "col_xl_data":        17,
+        "col_xl_duracao":     13,
+        "col_xl_tend_inicio": 16,
     },
     "agua_vales_capa": {
         "label":          "Água dos Vales",
@@ -110,10 +114,12 @@ TEMPLATES = {
         "aba":            "Capa",
         "skiprows":       28,
         "colunas_pandas": [0, 1, 2, 3, 7, 10, 11, 14, 16, 17, 19, 20],
-        "col_xl_origem":  1,
-        "col_xl_marco":   8,
-        "col_xl_obs":     20,
-        "col_xl_data":    17,
+        "col_xl_origem":       1,
+        "col_xl_marco":        8,
+        "col_xl_obs":         20,
+        "col_xl_data":        17,
+        "col_xl_duracao":     13,
+        "col_xl_tend_inicio": 16,
     },
     "agua_vales_barragens": {
         "label":          "Água dos Vales - Barragens",
@@ -121,10 +127,12 @@ TEMPLATES = {
         "aba":            "Barragens",
         "skiprows":       28,
         "colunas_pandas": [0, 1, 2, 3, 7, 10, 11, 14, 16, 17, 19, 20],
-        "col_xl_origem":  1,
-        "col_xl_marco":   8,
-        "col_xl_obs":     20,
-        "col_xl_data":    17,
+        "col_xl_origem":       1,
+        "col_xl_marco":        8,
+        "col_xl_obs":         20,
+        "col_xl_data":        17,
+        "col_xl_duracao":     13,
+        "col_xl_tend_inicio": 16,
     },
     "coopera": {
         "label":          "Coopera MG",
@@ -132,10 +140,12 @@ TEMPLATES = {
         "aba":            "Capa",
         "skiprows":       34,
         "colunas_pandas": [0, 1, 2, 3, 7, 10, 11, 14, 16, 17, 19, 20],
-        "col_xl_origem":  1,
-        "col_xl_marco":   8,
-        "col_xl_obs":     20,
-        "col_xl_data":    17,
+        "col_xl_origem":       1,
+        "col_xl_marco":        8,
+        "col_xl_obs":         20,
+        "col_xl_data":        17,
+        "col_xl_duracao":     13,
+        "col_xl_tend_inicio": 16,
     },
     "investimentos": {
         "label":          "Investimentos",
@@ -143,10 +153,12 @@ TEMPLATES = {
         "aba":            "Capa 2026",
         "skiprows":       34,
         "colunas_pandas": [0, 1, 2, 3, 7, 10, 11, 14, 16, 17, 19, 20],
-        "col_xl_origem":  1,
-        "col_xl_marco":   8,
-        "col_xl_obs":     20,
-        "col_xl_data":    17,
+        "col_xl_origem":       1,
+        "col_xl_marco":        8,
+        "col_xl_obs":         20,
+        "col_xl_data":        17,
+        "col_xl_duracao":     13,
+        "col_xl_tend_inicio": 16,
     },
     "rmbh": {
         "label":          "Segurança Hídrica - RMBH",
@@ -154,10 +166,12 @@ TEMPLATES = {
         "aba":            "Capa",
         "skiprows":       27,
         "colunas_pandas": [0, 1, 2, 3, 7, 10, 11, 14, 16, 17, 19, 20],
-        "col_xl_origem":  1,
-        "col_xl_marco":   8,
-        "col_xl_obs":     20,
-        "col_xl_data":    17,
+        "col_xl_origem":       1,
+        "col_xl_marco":        8,
+        "col_xl_obs":         20,
+        "col_xl_data":        17,
+        "col_xl_duracao":     13,
+        "col_xl_tend_inicio": 16,
     },
     "mgtech": {
         "label":          "MG Tech",
@@ -165,10 +179,12 @@ TEMPLATES = {
         "aba":            "Capa replanejamento 2026",
         "skiprows":       33,
         "colunas_pandas": [0, 1, 2, 3, 7, 10, 11, 14, 16, 17, 19, 20],
-        "col_xl_origem":  1,
-        "col_xl_marco":   8,
-        "col_xl_obs":     20,
-        "col_xl_data":    17,
+        "col_xl_origem":       1,
+        "col_xl_marco":        8,
+        "col_xl_obs":         20,
+        "col_xl_data":        17,
+        "col_xl_duracao":     13,
+        "col_xl_tend_inicio": 16,
     },
     "vale_litio": {
         "label":          "Vale do Lítio",
@@ -176,11 +192,13 @@ TEMPLATES = {
         "aba":            "CAPA",
         "skiprows":       35,
         "colunas_pandas": [0, 1, 2, 3, 7, 10, 11, 14, 16, 17, 19, 20],
-        "col_xl_origem":  1,
-        "col_xl_marco":   8,
-        "col_xl_obs":     20,
-        "col_xl_data":    17,
-        "nivel_tipo":     "espelho",
+        "col_xl_origem":       1,
+        "col_xl_marco":        8,
+        "col_xl_obs":         20,
+        "col_xl_data":        17,
+        "col_xl_duracao":     13,
+        "col_xl_tend_inicio": 16,
+        "nivel_tipo":         "espelho",
     },
     "plac_energia": {
         "label":          "PLAC - Energia",
@@ -188,11 +206,13 @@ TEMPLATES = {
         "aba":            "Cronograma - ENERGIA",
         "skiprows":       1,
         "colunas_pandas": [0, 1, 2, 3, 11, 12, 13, 16, 18, 19, 23, 25],
-        "col_xl_origem":  1,
-        "col_xl_marco":   12,
-        "col_xl_obs":     24,
-        "col_xl_data":    19,
-        "nivel_tipo":     "flat",
+        "col_xl_origem":       1,
+        "col_xl_marco":       12,
+        "col_xl_obs":         24,
+        "col_xl_data":        19,
+        "col_xl_duracao":     15,
+        "col_xl_tend_inicio": 18,
+        "nivel_tipo":         "flat",
     },
     "plac_industria": {
         "label":          "PLAC - Indústria",
@@ -200,11 +220,13 @@ TEMPLATES = {
         "aba":            "Cronograma - INDÚSTRIA",
         "skiprows":       1,
         "colunas_pandas": [0, 1, 2, 3, 11, 12, 13, 16, 18, 19, 23, 25],
-        "col_xl_origem":  1,
-        "col_xl_marco":   12,
-        "col_xl_obs":     24,
-        "col_xl_data":    19,
-        "nivel_tipo":     "flat",
+        "col_xl_origem":       1,
+        "col_xl_marco":       12,
+        "col_xl_obs":         24,
+        "col_xl_data":        19,
+        "col_xl_duracao":     15,
+        "col_xl_tend_inicio": 18,
+        "nivel_tipo":         "flat",
     },
     "plac_transporte": {
         "label":          "PLAC - Transporte",
@@ -212,11 +234,13 @@ TEMPLATES = {
         "aba":            "Cronograma - TRANSPORTE",
         "skiprows":       1,
         "colunas_pandas": [0, 1, 2, 3, 11, 12, 13, 16, 18, 19, 23, 25],
-        "col_xl_origem":  1,
-        "col_xl_marco":   12,
-        "col_xl_obs":     24,
-        "col_xl_data":    19,
-        "nivel_tipo":     "flat",
+        "col_xl_origem":       1,
+        "col_xl_marco":       12,
+        "col_xl_obs":         24,
+        "col_xl_data":        19,
+        "col_xl_duracao":     15,
+        "col_xl_tend_inicio": 18,
+        "nivel_tipo":         "flat",
     },
     "plac_des_sust": {
         "label":          "PLAC - Des. Sustentável",
@@ -224,23 +248,27 @@ TEMPLATES = {
         "aba":            "Cronograma - Des. Sust. e Ação ",
         "skiprows":       1,
         "colunas_pandas": [0, 1, 2, 3, 11, 12, 13, 16, 18, 19, 23, 25],
-        "col_xl_origem":  1,
-        "col_xl_marco":   12,
-        "col_xl_obs":     24,
-        "col_xl_data":    19,
-        "nivel_tipo":     "flat",
+        "col_xl_origem":       1,
+        "col_xl_marco":       12,
+        "col_xl_obs":         24,
+        "col_xl_data":        19,
+        "col_xl_duracao":     15,
+        "col_xl_tend_inicio": 18,
+        "nivel_tipo":         "flat",
     },
     "dados_reunioes": {
-        "label":          "Reunião Gerencial",
-        "sheet_id":       "1UdP19eJ-1rNvnuDtZURBqymYLRV4CHVFcwZs_Tw34mY",
-        "aba":            "Plano de Ação 2026",
-        "skiprows":       1,
-        "colunas_pandas": [0, 2, 3, 4, 7, 9, 10, 13, 15, 16, 19, 21],
-        "col_xl_origem":  1,
-        "col_xl_marco":   8,
-        "col_xl_obs":     20,
-        "col_xl_data":    24,
-        "nivel_tipo":     "flat",
+        "label":               "Reunião Gerencial",
+        "sheet_id":            "1UdP19eJ-1rNvnuDtZURBqymYLRV4CHVFcwZs_Tw34mY",
+        "aba":                 "Plano de Ação 2026",
+        "skiprows":            1,
+        "colunas_pandas":      [0, 2, 3, 4, 7, 9, 10, 13, 15, 16, 19, 21],
+        "col_xl_origem":       1,
+        "col_xl_marco":        8,
+        "col_xl_obs":         20,
+        "col_xl_data":        16,
+        "col_xl_duracao":     12,
+        "col_xl_tend_inicio": 15,
+        "nivel_tipo":         "flat",
     },
 }
 
@@ -378,39 +406,80 @@ def carregar_emails_conhecidos():
     return sorted(emails)
 
 # --- FUNÇÃO: INJETAR DADOS NO GOOGLE SHEETS ---
+def _parse_data_br(s):
+    s = (s or "").strip()
+    if not s:
+        return None
+    for fmt in ("%d/%m/%Y", "%Y-%m-%d", "%d-%m-%Y"):
+        try:
+            return datetime.strptime(s, fmt).date()
+        except ValueError:
+            continue
+    return None
+
 def confirmar_na_planilha(hash_id, texto_novo, nova_data_str, template_nome="reurb"):
     cfg = TEMPLATES[template_nome]
     gc = get_gspread_client()
     sh = gc.open_by_key(cfg["sheet_id"])
     ws = sh.worksheet(cfg["aba"])
-    data = ws.get_all_values()
+    data         = ws.get_all_values()
+    data_formula = ws.get_all_values(value_render_option='FORMULA')
 
     for i in range(cfg["skiprows"], len(data)):
-        row_data  = data[i]
-        excel_row = i + 1  # gspread usa indexação 1-based
+        row_data    = data[i]
+        row_formula = data_formula[i] if i < len(data_formula) else []
+        excel_row   = i + 1  # gspread usa indexação 1-based
 
         val_origem = row_data[cfg["col_xl_origem"] - 1] if len(row_data) >= cfg["col_xl_origem"] else ""
         val_marco  = row_data[cfg["col_xl_marco"]  - 1] if len(row_data) >= cfg["col_xl_marco"]  else ""
 
-        if val_marco:
-            row_hash = hashlib.sha256(f"{excel_row}{val_origem}{val_marco}".encode()).hexdigest()[:10]
-            if row_hash == hash_id:
-                obs_idx   = cfg["col_xl_obs"] - 1
-                obs_atual = row_data[obs_idx].strip() if len(row_data) > obs_idx else ""
-                assinatura = f"[{datetime.now().strftime('%d/%m/%Y')} - Equipe]: {texto_novo}"
-                novo_obs  = f"{obs_atual}\n{assinatura}" if obs_atual and obs_atual not in ["None", "-", ""] else assinatura
-                ws.update_cell(excel_row, cfg["col_xl_obs"], novo_obs)
+        if not val_marco:
+            continue
 
-                if nova_data_str and nova_data_str not in ["None", ""]:
-                    try:
-                        data_fmt = datetime.strptime(nova_data_str, "%Y-%m-%d").strftime("%d/%m/%Y")
-                        ws.update_cell(excel_row, cfg["col_xl_data"], data_fmt)
-                    except ValueError:
-                        pass
+        row_hash = hashlib.sha256(f"{excel_row}{val_origem}{val_marco}".encode()).hexdigest()[:10]
+        if row_hash != hash_id:
+            continue
 
-                return True
+        # 1. Atualiza observações
+        obs_idx   = cfg["col_xl_obs"] - 1
+        obs_atual = row_data[obs_idx].strip() if len(row_data) > obs_idx else ""
+        assinatura = f"[{datetime.now().strftime('%d/%m/%Y')} - Equipe]: {texto_novo}"
+        novo_obs  = f"{obs_atual}\n{assinatura}" if obs_atual and obs_atual not in ["None", "-", ""] else assinatura
+        ws.update_cell(excel_row, cfg["col_xl_obs"], novo_obs)
 
-    return False
+        # 2. Atualiza data (com engenharia reversa se Tend. Término for fórmula)
+        if nova_data_str and nova_data_str not in ["None", ""]:
+            nova_termino = _parse_data_br(nova_data_str)
+            if nova_termino is None:
+                return True, "Observação gravada, mas a data informada é inválida e foi ignorada."
+
+            col_data    = cfg["col_xl_data"]
+            col_duracao = cfg.get("col_xl_duracao")
+            col_ti      = cfg.get("col_xl_tend_inicio")
+
+            val_data_formula = row_formula[col_data - 1] if len(row_formula) >= col_data else ""
+            eh_formula = isinstance(val_data_formula, str) and val_data_formula.startswith("=")
+
+            if eh_formula and col_duracao and col_ti:
+                # Engenharia reversa: grava a nova duração; a planilha recalcula a Tend. Término
+                val_ti_str  = row_data[col_ti - 1] if len(row_data) >= col_ti else ""
+                tend_inicio = _parse_data_br(val_ti_str)
+                if tend_inicio is None:
+                    return False, f"Não foi possível ler a Tendência de Início ('{val_ti_str}') para recalcular a duração."
+                nova_dur = (nova_termino - tend_inicio).days
+                if nova_dur < 0:
+                    return False, (
+                        f"A nova data ({nova_termino.strftime('%d/%m/%Y')}) é anterior à Tendência de Início "
+                        f"({tend_inicio.strftime('%d/%m/%Y')}). Duração negativa não é permitida."
+                    )
+                ws.update_cell(excel_row, col_duracao, nova_dur)
+            else:
+                # Célula manual: sobrescreve direto a Tend. Término
+                ws.update_cell(excel_row, col_data, nova_termino.strftime("%d/%m/%Y"))
+
+        return True, ""
+
+    return False, "Linha não encontrada na planilha (hash não corresponde)."
 
 # --- EXPORTAÇÃO DOCX ---
 COLUNAS_DOCX = [
@@ -855,13 +924,14 @@ Seja objetivo e use bullet points para os itens 1 a 3."""
                             if b1.button("✅ Confirmar na Planilha", key=f"conf_{row['id']}", type="primary"):
                                 with st.spinner("Gravando edições no Excel..."):
                                     data_para_gravar = str(data_editada) if data_editada else ""
-                                    if confirmar_na_planilha(row['hash_id'], texto_editado, data_para_gravar, row.get('template') or 'reurb'):
+                                    ok, msg = confirmar_na_planilha(row['hash_id'], texto_editado, data_para_gravar, row.get('template') or 'reurb')
+                                    if ok:
                                         deletar_resposta(row['id'])
                                         st.cache_data.clear()
-                                        st.success("Atualização gravada com sucesso!")
+                                        st.success("Atualização gravada com sucesso!" + (f" ({msg})" if msg else ""))
                                         st.rerun()
                                     else:
-                                        st.error("Erro ao gravar. Verifique se o arquivo Excel está fechado.")
+                                        st.error(f"Erro ao gravar: {msg}")
 
                             if b2.button("🧠 Análise IA", key=f"ia_{row['id']}"):
                                 st.session_state[f'ia_res_{template_nome}']   = analisar_com_ia(row['marco'], row['responsavel'], texto_editado, str(data_editada))
